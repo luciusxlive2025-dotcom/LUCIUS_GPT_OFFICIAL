@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>LUCIUS GPT</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg:       #0a0a12;
+    --surface:  #12121e;
+    --card:     #1a1a2e;
+    --border:   rgba(138,43,226,.25);
+    --purple:   #8a2be2;
+    --violet:   #9b59b6;
+    --glow:     #a855f7;
+    --text:     #e8e8f0;
+    --muted:    #7c7c9a;
+    --accent:   #c084fc;
+    --success:  #22c55e;
+    --r:        14px;
+    --font:     'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+  }
+
+  /* ── Background glow ── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(138,43,226,.18) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,18,.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-wrap {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6d28d9, #a855f7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 16px rgba(168,85,247,.4);
+    flex-shrink: 0;
+  }
+
+  .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
+  .brand span {
+    font-size: 11px; color: var(--muted);
+    background: rgba(138,43,226,.2);
+    padding: 2px 8px; border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Greeting ── */
+  .greeting {
+    position: relative; z-index: 1;
+    padding: 22px 20px 10px;
+  }
+  .greeting h2 { font-size: 20px; font-weight: 700; }
+  .greeting p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Stats bar ── */
+  .stats-row {
+    position: relative; z-index: 1;
+    display: flex; gap: 10px;
+    padding: 0 20px 18px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .stats-row::-webkit-scrollbar { display: none; }
+
+  .stat-chip {
+    flex-shrink: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .stat-chip .val { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .stat-chip .lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Section title ── */
+  .section-title {
+    position: relative; z-index: 1;
+    padding: 0 20px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Grid ── */
+  .grid {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 20px 20px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px 14px 14px;
+    cursor: pointer;
+    transition: transform .18s, box-shadow .18s, border-color .18s;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+    position: relative; overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(138,43,226,.06), transparent 60%);
+    pointer-events: none;
+  }
+
+  .card:active { transform: scale(.97); }
+
+  .card:hover {
+    border-color: rgba(168,85,247,.5);
+    box-shadow: 0 0 20px rgba(138,43,226,.2), 0 4px 20px rgba(0,0,0,.3);
+  }
+
+  .card.featured {
+    grid-column: span 2;
+    flex-direction: row; align-items: center; gap: 14px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(109,40,217,.35), rgba(168,85,247,.15));
+    border-color: rgba(168,85,247,.4);
+  }
+
+  .card-icon {
+    font-size: 26px;
+    line-height: 1;
+    filter: drop-shadow(0 0 6px rgba(168,85,247,.5));
+  }
+
+  .card-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .card-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .card-badge {
+    position: absolute; top: 10px; right: 10px;
+    background: var(--purple);
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px;
+    letter-spacing: .5px;
+    color: #fff;
+  }
+
+  /* ── Ripple ── */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(168,85,247,.3);
+    transform: scale(0);
+    animation: ripple .5s linear;
+    pointer-events: none;
+  }
+  @keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* ── Chat panel ── */
+  .panel {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    flex-direction: column;
+  }
+  .panel.open { display: flex; }
+
+  .panel-header {
+    background: rgba(10,10,18,.9);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0;
+  }
+  .panel-back {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; flex-shrink: 0;
+    transition: background .15s;
+  }
+  .panel-back:hover { background: rgba(138,43,226,.3); }
+
+  .panel-title { font-size: 16px; font-weight: 700; }
+  .panel-sub   { font-size: 11px; color: var(--success); }
+
+  .messages {
+    flex: 1; overflow-y: auto;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .msg {
+    max-width: 82%;
+    padding: 11px 14px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    word-break: break-word;
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.bot {
+    align-self: flex-start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+
+  .msg.bot code {
+    background: rgba(168,85,247,.15);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+  }
+
+  .msg-time {
+    font-size: 10px;
+    color: rgba(255,255,255,.5);
+    margin-top: 4px;
+    text-align: right;
+  }
+
+  .typing-indicator {
+    display: flex; align-items: center; gap: 4px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px; border-bottom-left-radius: 4px;
+    align-self: flex-start;
+    max-width: 70px;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s infinite;
+  }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce {
+    0%,60%,100% { transform: translateY(0); }
+    30%          { transform: translateY(-5px); }
+  }
+
+  .input-row {
+    padding: 10px 14px;
+    background: rgba(10,10,18,.9);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .input-row textarea {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text);
+    resize: none;
+    max-height: 120px;
+    min-height: 42px;
+    outline: none;
+    transition: border-color .2s;
+    line-height: 1.4;
+  }
+
+  .input-row textarea:focus { border-color: var(--purple); }
+  .input-row textarea::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 42px; height: 42px; flex-shrink: 0;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    border: none; border-radius: 12px;
+    color: #fff; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: opacity .2s, transform .15s;
+    box-shadow: 0 0 12px rgba(168,85,247,.4);
+  }
+  .send-btn:hover   { opacity: .85; }
+  .send-btn:active  { transform: scale(.93); }
+  .send-btn:disabled { opacity: .4; cursor: default; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 20px; border-radius: 30px;
+    font-size: 13px; z-index: 999;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card { animation: fadeUp .35s ease both; }
+  .card:nth-child(1)  { animation-delay: .05s; }
+  .card:nth-child(2)  { animation-delay: .08s; }
+  .card:nth-child(3)  { animation-delay: .11s; }
+  .card:nth-child(4)  { animation-delay: .14s; }
+  .card:nth-child(5)  { animation-delay: .17s; }
+  .card:nth-child(6)  { animation-delay: .20s; }
+  .card:nth-child(7)  { animation-delay: .23s; }
+  .card:nth-child(8)  { animation-delay: .26s; }
+  .card:nth-child(9)  { animation-delay: .29s; }
+  .card:nth-child(10) { animation-delay: .32s; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ════════ MAIN DASHBOARD ════════ -->
+<header class="header">
+  <div class="logo-wrap">🤖</div>
+  <div class="brand">
+    <h1>LUCIUS <span style="color:var(--accent)">GPT</span></h1>
+    <span>● Online</span>
+  </div>
+</header>
+
+<div class="greeting">
+  <h2>Hello, <span id="user-name" style="color:var(--accent)">User</span> 👋</h2>
+  <p>What would you like to do today?</p>
+</div>
+
+<div class="stats-row">
+  <div class="stat-chip"><div class="val" id="s-users">—</div><div class="lbl">Users</div></div>
+  <div class="stat-chip"><div class="val" id="s-bots">—</div><div class="lbl">Bots</div></div>
+  <div class="stat-chip"><div class="val" id="s-imgs">—</div><div class="lbl">Images</div></div>
+  <div class="stat-chip"><div class="val" id="s-msgs">—</div><div class="lbl">Messages</div></div>
+</div>
+
+<p class="section-title">⚡ Quick Actions</p>
+
+<div class="grid">
+  <!-- Featured -->
+  <div class="card featured" onclick="openChat('chat')" data-action="chat">
+    <span class="card-icon">💬</span>
+    <div>
+      <div class="card-label">AI Chat</div>
+      <div class="card-desc">ChatGPT-style conversations</div>
+    </div>
+    <span class="card-badge">LIVE</span>
+  </div>
+
+  <div class="card" onclick="openChat('code')" data-action="code">
+    <span class="card-icon">💻</span>
+    <div class="card-label">Generate Code</div>
+    <div class="card-desc">Write & debug code</div>
+  </div>
+
+  <div class="card" onclick="openChat('image')" data-action="image">
+    <span class="card-icon">🖼️</span>
+    <div class="card-label">Image Generator</div>
+    <div class="card-desc">DALL·E powered art</div>
+    <span class="card-badge">AI</span>
+  </div>
+
+  <div class="card" onclick="openChat('logo')" data-action="logo">
+    <span class="card-icon">🎨</span>
+    <div class="card-label">Create Logo</div>
+    <div class="card-desc">AI brand identity</div>
+  </div>
+
+  <div class="card" onclick="openChat('website')" data-action="website">
+    <span class="card-icon">🌐</span>
+    <div class="card-label">Website Gen</div>
+    <div class="card-desc">Full HTML pages</div>
+  </div>
+
+  <div class="card" onclick="openChat('bot')" data-action="bot">
+    <span class="card-icon">🤖</span>
+    <div class="card-label">Create Bot</div>
+    <div class="card-desc">Telegram bot builder</div>
+  </div>
+
+  <div class="card" onclick="openChat('writer')" data-action="writer">
+    <span class="card-icon">📝</span>
+    <div class="card-label">AI Writer</div>
+    <div class="card-desc">Content & copywriting</div>
+  </div>
+
+  <div class="card" onclick="sendToBot('my_bots')" data-action="bots">
+    <span class="card-icon">📂</span>
+    <div class="card-label">My Bots</div>
+    <div class="card-desc">View created bots</div>
+  </div>
+
+  <div class="card" onclick="sendToBot('statistics')" data-action="stats">
+    <span class="card-icon">📊</span>
+    <div class="card-label">Statistics</div>
+    <div class="card-desc">Usage analytics</div>
+  </div>
+
+  <div class="card" onclick="sendToBot('support')" data-action="support">
+    <span class="card-icon">🆘</span>
+    <div class="card-label">Support</div>
+    <div class="card-desc">Get help fast</div>
+  </div>
+</div>
+
+<!-- ════════ CHAT PANEL ════════ -->
+<div class="panel" id="chat-panel">
+  <div class="panel-header">
+    <div class="panel-back" onclick="closeChat()">←</div>
+    <div>
+      <div class="panel-title" id="panel-title">AI Chat</div>
+      <div class="panel-sub" id="panel-sub">● Ready</div>
+    </div>
+  </div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="input-row">
+    <textarea
+      id="chat-input"
+      placeholder="Type a message..."
+      rows="1"
+      onkeydown="handleKey(event)"
+      oninput="autoResize(this)"
+    ></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
+<!-- ════════ TOAST ════════ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Telegram WebApp Init ──────────────────────────────────────────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor('#0a0a12');
+  tg.setBackgroundColor('#0a0a12');
+  if (tg.initDataUnsafe?.user) {
+    const u = tg.initDataUnsafe.user;
+    document.getElementById('user-name').textContent =
+      u.first_name || u.username || 'User';
+  }
+}
+
+// ── Panel state ───────────────────────────────────────────────────────────────
+let currentMode = 'chat';
+const panelTitles = {
+  chat:    ['💬 AI Chat',          'ChatGPT-style assistant'],
+  code:    ['💻 Code Engine',      'Write & debug code'],
+  image:   ['🖼️ Image Generator',  'Describe your image'],
+  logo:    ['🎨 Logo Creator',     'Enter brand name'],
+  website: ['🌐 Website Generator','Describe your site'],
+  bot:     ['🤖 Bot Builder',      'Build a Telegram bot'],
+  writer:  ['📝 AI Writer',        'Content & copywriting'],
+};
+
+const systemPrompts = {
+  chat:    "You are LUCIUS GPT, an elite AI assistant. Be helpful, concise, and use tasteful emojis.",
+  code:    "You are LUCIUS GPT Code Engine. Write clean, production-ready code with explanations. Use markdown code blocks.",
+  image:   "You are LUCIUS GPT. When asked for images, describe what an AI would generate in vivid detail and add a note to use the /image command in the Telegram bot for actual image generation.",
+  logo:    "You are LUCIUS GPT Logo Creator. Describe a professional logo concept for the brand, including colors, shapes, typography, and style. Be specific and visual.",
+  website: "You are LUCIUS GPT Web Engine. Generate complete, single-file HTML pages with embedded CSS and JavaScript. Use dark themes. Return the full HTML.",
+  bot:     "You are LUCIUS GPT Bot Builder. Generate complete Telegram bot code using Python + Aiogram 3.x with all handlers, keyboards, and clear setup comments.",
+  writer:  "You are LUCIUS GPT AI Writer. Write compelling, high-quality content adapted to the user's request. Use formatting where helpful.",
+};
+
+const welcomeMsgs = {
+  chat:    "Hello! I'm LUCIUS GPT. Ask me anything — I can answer questions, explain concepts, help you brainstorm, and much more! 🚀",
+  code:    "👨‍💻 Code Engine ready! Tell me what you want to build or paste code you need help with.",
+  image:   "🖼️ Image Generator active! Describe the image you want to create.\n\n💡 For actual image generation, use the Telegram bot with /image or tap Image Generator in the menu.",
+  logo:    "🎨 Logo Creator ready! Enter your brand or company name and I'll create a detailed logo concept.",
+  website: "🌐 Website Generator ready! Describe the website you need and I'll generate full HTML code.",
+  bot:     "🤖 Bot Builder ready! Tell me what kind of Telegram bot you want to create.",
+  writer:  "📝 AI Writer ready! What do you want me to write? Blog post, ad copy, email, story — anything!",
+};
+
+let chatHistory = [];
+
+function openChat(mode) {
+  currentMode = mode;
+  chatHistory = [];
+  const panel = document.getElementById('chat-panel');
+  const [title, sub] = panelTitles[mode];
+  document.getElementById('panel-title').textContent = title;
+  document.getElementById('panel-sub').textContent = '● Ready';
+  panel.classList.add('open');
+  document.getElementById('messages').innerHTML = '';
+  addBotMessage(welcomeMsgs[mode]);
+  document.getElementById('chat-input').focus();
+}
+
+function closeChat() {
+  document.getElementById('chat-panel').classList.remove('open');
+}
+
+function addUserMessage(text) {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'msg user';
+  el.innerHTML = `${escHtml(text)}<div class="msg-time">${getTime()}</div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addBotMessage(text) {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'msg bot';
+  el.innerHTML = formatMsg(text) + `<div class="msg-time" style="color:var(--muted)">${getTime()}</div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'typing-indicator';
+  el.id = 'typing';
+  el.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+function removeTyping() {
+  document.getElementById('typing')?.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  autoResize(input);
+  addUserMessage(text);
+  chatHistory.push({ role: 'user', content: text });
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  document.getElementById('panel-sub').textContent = '⌛ Thinking...';
+  const typing = showTyping();
+
+  try {
+    const messages = [
+      { role: 'system', content: systemPrompts[currentMode] },
+      ...chatHistory.slice(-16),
+    ];
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompts[currentMode],
+        messages: chatHistory.slice(-16).map(m => ({
+          role: m.role === 'system' ? 'user' : m.role,
+          content: m.content,
+        })),
+      }),
+    });
+
+    removeTyping();
+
+    if (!res.ok) {
+      // Fallback: smart offline reply
+      const reply = offlineReply(text, currentMode);
+      addBotMessage(reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+    } else {
+      const data  = await res.json();
+      const reply = data.content?.[0]?.text || '⚠️ No response received.';
+      addBotMessage(reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+    }
+  } catch {
+    removeTyping();
+    const reply = offlineReply(text, currentMode);
+    addBotMessage(reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  }
+
+  btn.disabled = false;
+  document.getElementById('panel-sub').textContent = '● Ready';
+}
+
+function offlineReply(text, mode) {
+  const replies = {
+    chat:    `Thanks for your message! 💬 I'm LUCIUS GPT. For full AI responses, please use the Telegram bot directly where I'm fully connected to OpenAI.`,
+    code:    `💻 I'd love to help with your code! Open the bot on Telegram and use the **Generate Code** option for full AI-powered code generation.`,
+    image:   `🖼️ To generate images, use the Telegram bot and tap **Image Generator** — I'll create stunning DALL·E images for you!`,
+    logo:    `🎨 For your logo request, head to the Telegram bot and use **Create Logo** — I'll generate a professional AI logo!`,
+    website: `🌐 Website generation works best via the Telegram bot. Tap **Website Generator** and describe what you need!`,
+    bot:     `🤖 To build a Telegram bot with full code, use the **Create Bot** option in the Telegram bot menu!`,
+    writer:  `📝 For full AI writing, use the Telegram bot's **AI Writer** feature. I'll craft perfect content for you!`,
+  };
+  return replies[mode] || replies.chat;
+}
+
+function sendToBot(action) {
+  if (tg) {
+    tg.sendData(action);
+    tg.close();
+  } else {
+    showToast(`Opening ${action}…`);
+  }
+}
+
+// ── Formatting ────────────────────────────────────────────────────────────────
+function formatMsg(text) {
+  return escHtml(text)
+    .replace(/```([^`]+)```/g, '<pre style="background:rgba(168,85,247,.1);border:1px solid var(--border);border-radius:8px;padding:10px;overflow-x:auto;font-size:12px;margin:6px 0;font-family:monospace">$1</pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\*([^*]+)\*/g,   '<i>$1</i>')
+    .replace(/\n/g, '<br>');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getTime() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Input helpers ─────────────────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Ripple ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('pointerdown', e => {
+    const r = document.createElement('span');
+    r.className = 'ripple';
+    const rect = card.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+    card.appendChild(r);
+    setTimeout(() => r.remove(), 600);
+  });
+});
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Fake stats animation ───────────────────────────────────────────────────────
+function animateCount(el, target) {
+  let n = 0;
+  const step = Math.ceil(target / 40);
+  const tick = () => {
+    n = Math.min(n + step, target);
+    el.textContent = n >= 1000 ? (n/1000).toFixed(1)+'K' : n;
+    if (n < target) requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+// Simulate loading stats (in production, fetch from your API)
+setTimeout(() => {
+  animateCount(document.getElementById('s-users'), 12458);
+  animateCount(document.getElementById('s-bots'),  326);
+  animateCount(document.getElementById('s-imgs'),  1245);
+  animateCount(document.getElementById('s-msgs'),  25684);
+}, 400);
+</script>
+</body>
+</html>
